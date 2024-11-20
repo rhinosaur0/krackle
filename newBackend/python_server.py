@@ -7,6 +7,7 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 from emotionTest import predict_emotion
+import time
 
 # Load environment variables from .env file
 
@@ -69,14 +70,22 @@ async def createGame(sid, gameData):
             'rounds': gameData['rounds'],
             'maxPlayers': gameData['players']
         },
-        'players': []
+        'players': [],
+        'round_start_time': None
     }
-
+    lobby = lobbies[gameId]
+    player = {'id': sid, 'name': gameData['adminName'], 'emotion_history': []}
+    lobby['players'].append(player)
     # Admin joins the lobby room
     await sio.enter_room(sid, gameId)
 
     # Emit 'createGameResponse' back to the admin client
     await sio.emit('createGameResponse', {'success': True, 'gameId': gameId}, to=sid)
+
+    await sio.emit('playerJoined', player, room=gameId)
+
+    # Emit successful join to the player
+    await sio.emit('joinLobbyResponse', {'success': True, 'lobbyCode': gameId}, to=sid)
 
 @sio.event
 async def joinLobby(sid, data):
@@ -87,12 +96,12 @@ async def joinLobby(sid, data):
     lobby = lobbies.get(lobbyCode)
     if lobby:
         if len(lobby['players']) < lobby['settings']['maxPlayers']:
-            player = {'id': sid, 'name': playerName}
+            player = {'id': sid, 'name': playerName, 'emotion_history': []}
             lobby['players'].append(player)
             await sio.enter_room(sid, lobbyCode)
 
             # Emit 'playerJoined' to the lobby room
-            await sio.emit('playerJoined', player, room=lobbyCode)
+            await sio.emit('playerJoined', player, room=lobbyCode, to=lobbyCode)
 
             # Emit successful join to the player
             await sio.emit('joinLobbyResponse', {'success': True, 'lobbyCode': lobbyCode}, to=sid)
@@ -105,12 +114,13 @@ async def joinLobby(sid, data):
 
 @sio.event
 async def startGame(sid, lobbyCode):
-    print(f"Start Game Event Received for LobbyCode={lobbyCode}")
 
     lobby = lobbies.get(lobbyCode)
     if lobby and lobby['admin'] == sid:
         # Emit 'gameStarted' to all players in the lobby
-        await sio.emit('gameStarted', lobby['settings'], room=lobbyCode)
+        lobby['round_start_time'] = time.time()
+        players_names = [player['name'] for player in lobby['players']]
+        await sio.emit('gameStarted', {'gameSettings': lobby['settings'], 'room': lobbyCode, 'players': players_names}, to=lobbyCode)
     else:
         # Unauthorized or lobby not found
         await sio.emit('startGameResponse', {'success': False, 'message': 'Unauthorized or lobby not found.'}, to=sid)
@@ -143,9 +153,7 @@ def process_webcam_data(base64_data: str):
     
         # Convert to OpenCV format
         image_np = np.array(image)
-
         emotion = predict_emotion(image_np)
-        print(emotion)
         return emotion[0].tolist()
         
     except Exception as e:
@@ -155,10 +163,25 @@ def process_webcam_data(base64_data: str):
 # WebSocket route to handle webcam data and send back processing results
 @sio.event
 async def webcam_data(sid, data):
-    print(f"Webcam data received from {sid}")
     # Process the webcam data (base64 image)
     response_message = process_webcam_data(data['image'])
-    # Send response back to client
+    lobby_code = data['lobbyCode']
+    lobby = lobbies.get(lobby_code)
+    
+    if lobby:
+        try:
+            if response_message[3] + response_message[6] >= 0.8:
+                i = 0
+                while lobby['players'][i]['id'] != sid:
+                    i += 1
+                print(i)
+                lobby['players'][i]['emotion_history'].append(time.time() - lobby['round_start_time'])
+                print('appended')
+        except:
+            print('never appended')
+        print(lobby['players'])
+    else:
+        print(f'no lobby from {sid}')
     await sio.emit('webcam_response', {'message': response_message}, to=sid)
 
 

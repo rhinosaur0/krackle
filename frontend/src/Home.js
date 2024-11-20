@@ -25,7 +25,6 @@ const Home = () => {
         // Listen for successful join
         socket.on('playerJoined', (player) => {
             console.log(`Joined lobby as ${player.name}`);
-            // No need to setIsLoading(true) here since it's already set when attempting to join
         });
 
         // Listen for lobby not found
@@ -46,10 +45,10 @@ const Home = () => {
         });
 
         // Listen for game start
-        socket.on('gameStarted', (gameSettings) => {
+        socket.on('gameStarted', ({ gameSettings, room, players }) => {
             console.log("Received 'gameStarted' event:", gameSettings);
             setIsLoading(false);
-            navigate('/game?name=' + playerName, { state: { ...gameSettings } });
+            navigate('/game?lobby=' + lobby, { state: { name: playerName, gameSettings, players } });
         });
 
         // Cleanup listeners on unmount

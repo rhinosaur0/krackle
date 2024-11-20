@@ -33,6 +33,11 @@ const Admin = () => {
             }
         });
 
+        socket.on('gameStarted', ({ gameSettings, room, players }) => {
+            console.log("Received 'gameStarted' event:", gameSettings, 'lobby: ', room, 'players: ', players);
+            navigate('/game?lobby=' + room, { state: { name: adminName, gameSettings, players } });
+        });
+
         // Listen for players joining
         socket.on('playerJoined', (player) => {
             setCurrentPlayers(prev => [...prev, player]);
@@ -50,6 +55,7 @@ const Admin = () => {
             socket.off('createGameResponse');
             socket.off('playerJoined');
             socket.off('playerLeft');
+            socket.off('gameStarted');
         };
     }, []);
 
@@ -73,8 +79,7 @@ const Admin = () => {
         console.log("Starting game with settings:", { timer, rounds, players: currentPlayers.length });
         // Emit 'startGame' event to backend
         socket.emit('startGame', lobbyCode);
-        // Navigate to game screen
-        navigate('/game?name=' + searchParams.get('name'), { state: { timer: parseInt(timer), rounds: parseInt(rounds), players: currentPlayers.map(p => p.name) } });
+        //navigate('/game?name=' + searchParams.get('name'), { state: { timer: parseInt(timer), rounds: parseInt(rounds), players: currentPlayers.map(p => p.name) } });
     };
 
     const handleCopyLink = () => {
@@ -155,7 +160,7 @@ const Admin = () => {
                     <button
                         className="start-game-button"
                         onClick={handleStartGame}
-                        disabled={currentPlayers.length < 2} // Example condition
+                        disabled={currentPlayers.length < 1} // Example condition 
                     >
                         Start Game
                     </button>

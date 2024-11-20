@@ -1,61 +1,44 @@
 // // src/Loading.js
 
-// import React, { useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import socket from './socket';
-// import './Loading.css';
-
-// const Loading = () => {
-//     const navigate = useNavigate();
-
-//     useEffect(() => {
-//         // Listen for the gameStarted event
-//         socket.on('gameStarted', (gameSettings) => {
-//             console.log("Received 'gameStarted' event in Loading component:", gameSettings);
-//             navigate('/game', { state: { ...gameSettings } });
-//         });
-
-//         // Clean up the event listener on unmount
-//         return () => {
-//             socket.off('gameStarted');
-//         };
-//     }, [navigate]);
-
-//     return (
-//         <div className="loading-container">
-//             <p>Waiting for Admin...</p>
-//             <span className="loading-emoji">😄</span>
-//         </div>
-//     );
-// };
-
-// export default Loading;
-
-
-
-
-
-
-
-
-// src/Loading.js
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import socket from './socket';
 import './Loading.css';
 
 const Loading = () => {
+    const [players, setPlayers] = useState([]);
 
-    // const navigate = useNavigate();
-    // socket.on('gameStarted', (gameSettings) => {
-    //     console.log("Received 'gameStarted' event:", gameSettings);
-    //     setIsLoading(false);
-    //     navigate('/game', { state: { ...gameSettings } });
-    // });
+    useEffect(() => {
+        // Mock function to simulate fetching players
+        const fetchPlayers = () => {
+            // This should be replaced with actual logic to fetch players
+            setPlayers(['Player 1', 'Player 2', 'Player 3']);
+        };
+
+        fetchPlayers();
+
+        // Optionally, set up a socket listener or polling to update players
+        socket.on('playersUpdated', (newPlayers) => {
+            setPlayers(newPlayers);
+        });
+
+        // Clean up the event listener on unmount
+        return () => {
+            socket.off('playersUpdated');
+        };
+    }, []);
 
     return (
         <div className="loading-container">
-            <p>Waiting for Admin to Start the Game...</p>
+            <p className="loading-message">Waiting for Admin to Start the Game...</p>
             <span className="loading-emoji">😄</span>
+            <div className="lobby-players">
+                <h3>Players in Lobby:</h3>
+                <ul className="player-list">
+                    {players.map((player, index) => (
+                        <li key={index} className="player-item">{player}</li>
+                    ))}
+                </ul>
+            </div>
         </div>
     );
 };

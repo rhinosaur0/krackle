@@ -5,24 +5,80 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    background-color: #5c4d98;
+    min-height: 100vh;
+    padding: 2rem;
+    background: linear-gradient(
+        -45deg, 
+        #4834d4,    /* Darker purple */
+        #686de0,    /* Bright purple-blue */
+        #be2edd,    /* Vibrant pink-purple */
+        #ff4757
+    );
+    background-size: 300% 300%;
+    animation: gradientAnimation 8s ease infinite;
     color: white;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+}
+
+.loading-message {
     font-size: 2rem;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 .loading-emoji {
     font-size: 4rem;
-    animation: spin 1s infinite linear;
+    animation: emojiLoadingSpin 1s infinite linear;
     margin-top: 20px;
 }
 
-@keyframes spin {
-    from {
+@keyframes emojiLoadingSpin {
+    0% {
         transform: rotate(0deg);
     }
-    to {
+    100% {
         transform: rotate(360deg);
+    }
+}
+
+.lobby-players {
+    margin-top: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 20px;
+    width: 80%;
+    max-width: 500px;
+}
+
+.player-list {
+    list-style: none;
+    padding: 0;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    font-size: 1.2rem;
+}
+
+.player-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transition: background 0.3s ease;
+}
+
+/* Reuse the gradient animation from Home.css */
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
     }
 }

@@ -5,6 +5,7 @@ import socket from './socket';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import './Game.css';
 
+
 // Using a publicly hosted sample video for demonstration
 const URL = [
     'https://www.youtube.com/embed/qjckWVDjxoI?autoplay=1',
@@ -18,12 +19,13 @@ const emojis = ['😀', '😆', '😅', '😂', '🤣', '😊', '😍', '😎', 
 
 const Game = () => {
     const location = useLocation();
-    const { timer: initialTimer = 10, rounds: initialRounds = 3, players: initialPlayers = [] } = location.state || {};
+    const { name, gameSettings, players } = location.state || {};
 
-    const [timer, setTimer] = useState(initialTimer);
-    const [round, setRound] = useState(initialRounds);
+    const [timer, setTimer] = useState(gameSettings.timer);
+    const roundTime = gameSettings.timer;
+    const [round, setRound] = useState(gameSettings.rounds);
     const [deathLog, setDeathLog] = useState([]);
-    const [players, setPlayers] = useState(initialPlayers);
+    const [currentPlayers, setPlayers] = useState(players);
     const [smileDetected, setSmileDetected] = useState(false);
     const [webcamError, setWebcamError] = useState(null);  // State to track webcam errors
     
@@ -32,7 +34,9 @@ const Game = () => {
     
     
     const [searchParams] = useSearchParams();
-    const name = searchParams.get('name');
+    const params = new URLSearchParams(location.search);
+    const lobby = params.get('lobby');
+
     const navigate = useNavigate();
 
     const videoRef = useRef(null);  // Reference to the webcam video element
@@ -50,7 +54,7 @@ const Game = () => {
         console.log(socket.id);
         // Listen for players joining
         socket.on('playerJoined', (player) => {
-            setPlayers(prev => [...prev, player]);
+            setPlayers(prev => [...prev, player.name]);
             console.log(`Game display: player joined: ${player.name}`);
         });
 
@@ -74,10 +78,10 @@ const Game = () => {
             return () => clearInterval(countdown);
         } else {
             changeVideo();
-            setTimer(initialTimer);
+            setTimer(roundTime);
             setRound((prevRound) => prevRound - 1);
         }
-    }, [timer, round, initialTimer]);
+    }, [timer, round, roundTime]);
 
     const handlePlayerDeath = (playerName) => {
         setDeathLog((prevLog) => [...prevLog, `${playerName} has died.`]);
@@ -96,7 +100,7 @@ const Game = () => {
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
             const imageData = canvas.toDataURL('image/jpeg');
 
-            socket.emit('webcam_data', { image: imageData });
+            socket.emit('webcam_data', { image: imageData, lobbyCode: lobby});
         } else {
             console.log("Video element not ready yet.");
         }
@@ -129,7 +133,7 @@ const Game = () => {
                         console.log("Webcam stream is ready.");
                     });
                 } else {
-                    throw new Error('Video element is not available.');
+                    throw new Error('Video element is not available');
                 }
             } catch (error) {
                 console.error('Error accessing webcam:', error);
@@ -144,12 +148,11 @@ const Game = () => {
 
 
         socket.on('webcam_response', (data) => {
-            console.log('data message', data.message);
-            console.log('data', data)
-            if (data.message[3] + data.message[6] > 0.8) {
-                console.log('smile detected');
-                navigate('/lost');
-            }
+            // console.log('data message', data.message);
+            // if (data.message[3] + data.message[6] > 0.8) {
+            //     console.log('smile detected');
+            //     navigate('/lost');
+            // }
         });
         // Cleanup the interval and stop webcam on component unmount
         return () => {
@@ -177,16 +180,16 @@ const Game = () => {
                 <div className="player-list">
                     <h2>Players</h2>
                     <div className="player-icons">
-                        {players.map((player, index) => (
+                        {currentPlayers.map((player, index) => (
                             <div key={player.id || index} className="player-box">
                                 <span className="player-emoji">{emojis[index % emojis.length]}</span>
-                                <span className="player-name">{player.name}</span>
+                                <span className="player-name">{player}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                { <div className="main-video-container">
+                <div className="main-video-container">
                     <div className="video-container">
                         <iframe
                             className="youtube-iframe"
@@ -198,7 +201,7 @@ const Game = () => {
                         ></iframe>
                         <div className="overlay"></div>
                     </div>
-                </div> }
+                </div>
 
                 <div className="death-log">
                     <h2>Death Log</h2>

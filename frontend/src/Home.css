@@ -14,16 +14,27 @@
 @keyframes emojiSpin {
     0% {
         transform: scale(1.6) rotate(0deg);
-        text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
     }
     50% {
         transform: scale(2.4) rotate(180deg);
-        text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
     }
     100% {
         transform: scale(1.6) rotate(360deg);
+    }
+}
+
+@keyframes shadowGrow {
+    0%,
+    100% {
         text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
     }
+    50% {
+        text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+    }
+}
+
+.title-emoji.spinning {
+    animation: emojiSpin 0.7s linear, shadowGrow 0.7s linear;
 }
 
 .home-container {
@@ -75,9 +86,6 @@
     scale: 1.6;
 }
 
-.title-emoji.spinning {
-    animation: emojiSpin 0.7s linear;
-}
 
 /* Keep the rest of your styles */
 .name-entry {
