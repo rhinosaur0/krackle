@@ -6,9 +6,9 @@ import base64
 import numpy as np
 from io import BytesIO
 from PIL import Image
-from emotionTest import predict_emotion
 import time
 import uvicorn
+from newEmotion import *
 
 # Load environment variables from .env file
 
@@ -97,18 +97,26 @@ async def joinLobby(sid, data):
     lobby = lobbies.get(lobbyCode)
     if lobby:
         if len(lobby['players']) < lobby['settings']['maxPlayers']:
-            player = {'id': sid, 'name': playerName, 'emotion_history': []}
-            lobby['players'].append(player)
-            await sio.enter_room(sid, lobbyCode)
+            if not lobby['round_start_time']:
+                player = {'id': sid, 'name': playerName, 'emotion_history': []}
+                lobby['players'].append(player)
 
-            # Emit 'playerJoined' to the lobby room
-            await sio.emit('playerJoined', player, room=lobbyCode, to=lobbyCode)
+                players_names = [player['name'] for player in lobby['players']]
+                await sio.enter_room(sid, lobbyCode)
 
-            # Emit successful join to the player
-            await sio.emit('joinLobbyResponse', {'success': True, 'lobbyCode': lobbyCode}, to=sid)
+                # Emit 'playerJoined' to the lobby room
+                await sio.emit('playerJoined', player, room=lobbyCode, to=lobbyCode)
+
+                # Emit successful join to the player
+                await sio.emit('joinLobbyResponse', {'success': True, 'lobbyCode': lobbyCode, 'playerList': players_names}, to=sid)
+            else:
+                await sio.emit('joinLobbyResponse', {'success': False, 'message': 'Game already started, please wait until the game is finished.'}, to=sid)
+
         else:
             # Lobby full
             await sio.emit('joinLobbyResponse', {'success': False, 'message': 'Lobby is full.'}, to=sid)
+        
+    
     else:
         # Lobby not found
         await sio.emit('joinLobbyResponse', {'success': False, 'message': 'Lobby not found.'}, to=sid)
@@ -154,8 +162,8 @@ def process_webcam_data(base64_data: str):
     
         # Convert to OpenCV format
         image_np = np.array(image)
-        emotion = predict_emotion(image_np)
-        return emotion[0].tolist()
+        print(type(image_np))
+        return [1, 0, 0, 0, 0, 0, 0]
         
     except Exception as e:
         return str(e)
@@ -165,21 +173,19 @@ def process_webcam_data(base64_data: str):
 @sio.event
 async def webcam_data(sid, data):
     # Process the webcam data (base64 image)
-    response_message = process_webcam_data(data['image'])
+
     lobby_code = data['lobbyCode']
     lobby = lobbies.get(lobby_code)
+    current_time = time.time() - lobbies[data['lobbyCode']]['round_start_time']
+
+    response_message = process_webcam_data(data['image'])
     
     if lobby:
         try:
             if response_message[3] + response_message[6] >= 0.8:
-                i = 0
-                while lobby['players'][i]['id'] != sid:
-                    i += 1
-                print(i)
                 lobby['players'][i]['emotion_history'].append(time.time() - lobby['round_start_time'])
-                print('appended')
         except:
-            print('never appended')
+            pass
         print(lobby['players'])
     else:
         print(f'no lobby from {sid}')

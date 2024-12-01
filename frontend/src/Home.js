@@ -14,6 +14,7 @@ const Home = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [isSpinning, setIsSpinning] = useState(false);
+    const [playerList, setPlayerList] = useState([]);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -30,17 +31,17 @@ const Home = () => {
         // Listen for lobby not found
         socket.on('lobbyNotFound', () => {
             setError('Lobby not found. Please check the code and try again.');
-            setIsLoading(false);
         });
 
         // Listen for joinLobbyResponse
-        socket.on('joinLobbyResponse', ({ success, lobbyCode, message }) => {
+        socket.on('joinLobbyResponse', ({ success, lobbyCode, message, playerList }) => {
             if (success) {
                 console.log(`Successfully joined lobby: ${lobbyCode}`);
-                // Optionally, you can update UI or navigate
+                console.log(playerList);
+                setPlayerList(playerList);
+                setIsLoading(true);
             } else {
                 setError(message || 'Failed to join lobby.');
-                setIsLoading(false);
             }
         });
 
@@ -66,7 +67,7 @@ const Home = () => {
         if (playerName && lobbyCode) {
             console.log("Attempting to join lobby:", lobbyCode);
             socket.emit('joinLobby', { lobbyCode, playerName });
-            setIsLoading(true); // Show loading screen while attempting to join
+            // setIsLoading(true); // Show loading screen while attempting to join
         } else {
             setError('Please enter both your name and lobby code.');
         }
@@ -85,7 +86,7 @@ const Home = () => {
 
     // Render loading screen if in loading state
     if (isLoading) {
-        return <Loading />;
+        return <Loading playerList={playerList}/>;
     }
 
     return (

@@ -4,26 +4,22 @@ import React, { useState, useEffect } from 'react';
 import socket from './socket';
 import './Loading.css';
 
-const Loading = () => {
+const Loading = ({playerList}) => {
     const [players, setPlayers] = useState([]);
 
     useEffect(() => {
         // Mock function to simulate fetching players
-        const fetchPlayers = () => {
-            // This should be replaced with actual logic to fetch players
-            setPlayers(['Player 1', 'Player 2', 'Player 3']);
-        };
+        setPlayers(playerList);
 
-        fetchPlayers();
-
-        // Optionally, set up a socket listener or polling to update players
-        socket.on('playersUpdated', (newPlayers) => {
-            setPlayers(newPlayers);
+        
+        socket.on('playerJoined', (player) => {
+            setPlayers(prev => [...prev, player['name']]);
         });
 
         // Clean up the event listener on unmount
         return () => {
             socket.off('playersUpdated');
+            socket.off('playerJoined');
         };
     }, []);
 

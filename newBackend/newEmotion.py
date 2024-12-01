@@ -68,7 +68,7 @@ def blur_background(frame, faces):
 rmse_history = []  # Store rmse values
 frame_count = 0  # To count frames for recent peak tracking
 
-while True:
+for i in range(1000):
     ret, frame = cap.read()
     if not ret:
         break
@@ -143,6 +143,8 @@ while True:
         break
 
     frame_count += 1
+    if i % 50 == 0:
+        print(rmse_history)
 # use matplotlib to plot the rmse history
 import matplotlib.pyplot as plt
 
