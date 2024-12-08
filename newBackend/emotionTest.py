@@ -1,5 +1,7 @@
 
 import time
+from typing import Literal
+
 import numpy as np
 import argparse
 import cv2
@@ -10,7 +12,7 @@ import os
 import matplotlib.pyplot as plt
 
 # Suppress unnecessary logs
-os.environ['TF_CPP_MIN_LOG_LEVEL']: str = '2'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Define Colors for CLI output
 class Colors:
@@ -56,7 +58,7 @@ emotion_history: list[float] = []
 frame_rate: int | float = 5
 
 # Load pre-trained weights
-model.load_weights('model.h5')
+model.load_weights('newBackend/model.h5')
 
 # Function to predict emotion
 def predict_emotion(frame: np.ndarray) -> list:
@@ -68,7 +70,7 @@ def predict_emotion(frame: np.ndarray) -> list:
     :return: A list of predictions for each detected face in the frame.
     :rtype: list
     """
-    facecasc = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    facecasc = cv2.CascadeClassifier('newBackend/haarcascade_frontalface_default.xml')
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = facecasc.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
     preds = []
@@ -91,189 +93,194 @@ def predict_emotion(frame: np.ndarray) -> list:
 
     return preds
 
-# if the model results the client is happy or surprised in the last n seconds for 1/2 of the time, then the client loses
+def predict_from_face(face: np.ndarray) -> Literal["Angry", "Disgusted", "Fearful", "Happy", "Neutral", "Sad", "Surprised"]:
+    prediction = model.predict(face, verbose=0)
+    maxindex = int(np.argmax(prediction))
+    return emotion_dict[maxindex]
+if __name__ == '__main__':
+    # if the model results the client is happy or surprised in the last n seconds for 1/2 of the time, then the client loses
 
-n: int | float = 3
-# grace period for the client to be happy or surprised to adjust to the game
-happySurpriseLast: list[float] = list()
-cap = cv2.VideoCapture(0)
-# 7 emotions: angry, disgusted, fearful, happy, neutral, sad, surprised
-emojis = ["😠", "🤢", "😨", "😄", "😐", "😢", "😲"]
-GamePhase = "Adjust"
-prev: float = time.time()
-start_Time: float = time.time()
-no_face: float = time.time()
-while time.time() - start_Time < n or len(happySurpriseLast) >= n * frame_rate / 3 or no_face - time.time() > 1:
-    # time for client to adjust to the game
-    time_elapsed = time.time() - prev
-    if time_elapsed > 1. / frame_rate:
-        prev = time.time()
-    else:
-        continue
-    ret, frame = cap.read()
-    if not ret:
-        break
-    emotions = predict_emotion(frame)
-    if len(emotions) == 0:
-        if time.time() - no_face > 1:
-            print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
-            no_face = time.time()
-    else:
+    n: int | float = 3
+    # grace period for the client to be happy or surprised to adjust to the game
+    happySurpriseLast: list[float] = list()
+    cap = cv2.VideoCapture(0)
+    # 7 emotions: angry, disgusted, fearful, happy, neutral, sad, surprised
+    emojis = ["😠", "🤢", "😨", "😄", "😐", "😢", "😲"]
+    GamePhase = "Adjust"
+    prev: float = time.time()
+    start_Time: float = time.time()
+    no_face: float = time.time()
+    while time.time() - start_Time < n or len(happySurpriseLast) >= n * frame_rate / 3 or no_face - time.time() > 1:
+        # time for client to adjust to the game
+        time_elapsed = time.time() - prev
+        if time_elapsed > 1. / frame_rate:
+            prev = time.time()
+        else:
+            continue
+        ret, frame = cap.read()
+        if not ret:
+            break
+        emotions = predict_emotion(frame)
+        if len(emotions) == 0:
+            if time.time() - no_face > 1:
+                print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
+                no_face = time.time()
+        else:
+            for i in emotions:
+                if i[3] + i[6] >= 0.8:
+                    print(f"{Colors.YELLOW}❎ Adjust Your Face to Neutral{Colors.RESET}", end="")
+                    start_Time = time.time()
+                else:
+                    print(f"{Colors.GREEN}✅ You Are Now at Neutral Face {Colors.RESET}", end="")
+            print(f"{emojis[np.argmax(emotions[0])]}")
+        cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    # wait for other player to adjust their face
+
+    """ 
+    
+    TODO: Implement the game phase where the client has to keep a neutral face for n seconds.
+    
+    """
+
+    GamePhase = "Game"
+    print(f"{Colors.GREEN}✅ Face Adjusted, Game Start! {Colors.RESET}")
+    prev: float = time.time()
+    start_Time: float = time.time()
+    no_face: float = time.time()
+    while True:
+        time_elapsed = time.time() - prev
+        if time_elapsed > 1. / frame_rate:
+            prev = time.time()
+        else:
+            continue
+        ret, frame = cap.read()
+        flag = False
+        if not ret:
+            break
+        emotions = predict_emotion(frame)
+        if len(emotions) == 0:
+            if time.time() - no_face > 1:
+                print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
+                no_face = time.time()
         for i in emotions:
             if i[3] + i[6] >= 0.8:
-                print(f"{Colors.YELLOW}❎ Adjust Your Face to Neutral{Colors.RESET}", end="")
-                start_Time = time.time()
-            else:
-                print(f"{Colors.GREEN}✅ You Are Now at Neutral Face {Colors.RESET}", end="")
-        print(f"{emojis[np.argmax(emotions[0])]}")
-    cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-# wait for other player to adjust their face
-
-""" 
-
-TODO: Implement the game phase where the client has to keep a neutral face for n seconds.
-
-"""
-
-GamePhase = "Game"
-print(f"{Colors.GREEN}✅ Face Adjusted, Game Start! {Colors.RESET}")
-prev: float = time.time()
-start_Time: float = time.time()
-no_face: float = time.time()
-while True:
-    time_elapsed = time.time() - prev
-    if time_elapsed > 1. / frame_rate:
-        prev = time.time()
-    else:
-        continue
-    ret, frame = cap.read()
-    flag = False
-    if not ret:
-        break
-    emotions = predict_emotion(frame)
-    if len(emotions) == 0:
-        if time.time() - no_face > 1:
-            print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
-            no_face = time.time()
-    for i in emotions:
-        if i[3] + i[6] >= 0.8:
-            flag = True
-            emotion_history.append(time.time() - start_Time)
-    if flag:
-        index = 0
-        happySurpriseLast.append(time.time() - start_Time)
-        for i in range(len(happySurpriseLast)):
-            if time.time() - start_Time - happySurpriseLast[i] > n:
-                index = i
+                flag = True
+                emotion_history.append(time.time() - start_Time)
+        if flag:
+            index = 0
+            happySurpriseLast.append(time.time() - start_Time)
+            for i in range(len(happySurpriseLast)):
+                if time.time() - start_Time - happySurpriseLast[i] > n:
+                    index = i
+                    break
+                else:
+                    break
+            happySurpriseLast = happySurpriseLast[index:]
+            if len(happySurpriseLast) >= n * frame_rate / 3:
+                print(f"{Colors.RED}❌ You Lose {Colors.RESET}")
                 break
-            else:
-                break
-        happySurpriseLast = happySurpriseLast[index:]
-        if len(happySurpriseLast) >= n * frame_rate / 3:
-            print(f"{Colors.RED}❌ You Lose {Colors.RESET}")
+        flag = False
+        cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-    flag = False
-    cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
 
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
 
-for i in emotion_history:
-    plt.scatter(i, 0)
-plt.show()
-n: int | float = 3
-# grace period for the client to be happy or surprised to adjust to the game
-happySurpriseLast: list[float] = list()
-cap = cv2.VideoCapture(0)
-# 7 emotions: angry, disgusted, fearful, happy, neutral, sad, surprised
-emojis = ["😠", "🤢", "😨", "😄", "😐", "😢", "😲"]
-GamePhase = "Adjust"
-prev: float = time.time()
-start_Time: float = time.time()
-no_face: float = time.time()
-while time.time() - start_Time < n or len(happySurpriseLast) >= n * frame_rate / 3 or no_face - time.time() > 1:
-    # time for client to adjust to the game
-    time_elapsed = time.time() - prev
-    if time_elapsed > 1. / frame_rate:
-        prev = time.time()
-    else:
-        continue
-    ret, frame = cap.read()
-    if not ret:
-        break
-    emotions = predict_emotion(frame)
-    if len(emotions) == 0:
-        if time.time() - no_face > 1:
-            print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
-            no_face = time.time()
-    else:
+    for i in emotion_history:
+        plt.scatter(i, 0)
+    plt.show()
+    n: int | float = 3
+    # grace period for the client to be happy or surprised to adjust to the game
+    happySurpriseLast: list[float] = list()
+    cap = cv2.VideoCapture(0)
+    # 7 emotions: angry, disgusted, fearful, happy, neutral, sad, surprised
+    emojis = ["😠", "🤢", "😨", "😄", "😐", "😢", "😲"]
+    GamePhase = "Adjust"
+    prev: float = time.time()
+    start_Time: float = time.time()
+    no_face: float = time.time()
+    while time.time() - start_Time < n or len(happySurpriseLast) >= n * frame_rate / 3 or no_face - time.time() > 1:
+        # time for client to adjust to the game
+        time_elapsed = time.time() - prev
+        if time_elapsed > 1. / frame_rate:
+            prev = time.time()
+        else:
+            continue
+        ret, frame = cap.read()
+        if not ret:
+            break
+        emotions = predict_emotion(frame)
+        if len(emotions) == 0:
+            if time.time() - no_face > 1:
+                print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
+                no_face = time.time()
+        else:
+            for i in emotions:
+                if i[3] + i[6] >= 0.8:
+                    print(f"{Colors.YELLOW}❎ Adjust Your Face to Neutral{Colors.RESET}", end="")
+                    start_Time = time.time()
+                else:
+                    print(f"{Colors.GREEN}✅ You Are Now at Neutral Face {Colors.RESET}", end="")
+            print(f"{emojis[np.argmax(emotions[0])]}")
+        cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    # wait for other player to adjust their face
+
+
+
+    # TODO: Implement the game phase where the client has to keep a neutral face for n seconds.
+
+
+
+    GamePhase = "Game"
+    print(f"{Colors.GREEN}✅ Face Adjusted, Game Start! {Colors.RESET}")
+    prev: float = time.time()
+    start_Time: float = time.time()
+    no_face: float = time.time()
+    while True:
+        time_elapsed = time.time() - prev
+        if time_elapsed > 1. / frame_rate:
+            prev = time.time()
+        else:
+            continue
+        ret, frame = cap.read()
+        flag = False
+        if not ret:
+            break
+        emotions = predict_emotion(frame)
+        if len(emotions) == 0:
+            if time.time() - no_face > 1:
+                print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
+                no_face = time.time()
         for i in emotions:
             if i[3] + i[6] >= 0.8:
-                print(f"{Colors.YELLOW}❎ Adjust Your Face to Neutral{Colors.RESET}", end="")
-                start_Time = time.time()
-            else:
-                print(f"{Colors.GREEN}✅ You Are Now at Neutral Face {Colors.RESET}", end="")
-        print(f"{emojis[np.argmax(emotions[0])]}")
-    cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-# wait for other player to adjust their face
-
-
-
-# TODO: Implement the game phase where the client has to keep a neutral face for n seconds.
-
-
-
-GamePhase = "Game"
-print(f"{Colors.GREEN}✅ Face Adjusted, Game Start! {Colors.RESET}")
-prev: float = time.time()
-start_Time: float = time.time()
-no_face: float = time.time()
-while True:
-    time_elapsed = time.time() - prev
-    if time_elapsed > 1. / frame_rate:
-        prev = time.time()
-    else:
-        continue
-    ret, frame = cap.read()
-    flag = False
-    if not ret:
-        break
-    emotions = predict_emotion(frame)
-    if len(emotions) == 0:
-        if time.time() - no_face > 1:
-            print(f"{Colors.RED}❎ No face detected{Colors.RESET}")
-            no_face = time.time()
-    for i in emotions:
-        if i[3] + i[6] >= 0.8:
-            flag = True
-            emotion_history.append(time.time() - start_Time)
-    if flag:
-        index = 0
-        happySurpriseLast.append(time.time() - start_Time)
-        for i in range(len(happySurpriseLast)):
-            if time.time() - start_Time - happySurpriseLast[i] > n:
-                index = i
+                flag = True
+                emotion_history.append(time.time() - start_Time)
+        if flag:
+            index = 0
+            happySurpriseLast.append(time.time() - start_Time)
+            for i in range(len(happySurpriseLast)):
+                if time.time() - start_Time - happySurpriseLast[i] > n:
+                    index = i
+                    break
+                else:
+                    break
+            happySurpriseLast = happySurpriseLast[index:]
+            if len(happySurpriseLast) >= n * frame_rate / 3:
+                print(f"{Colors.RED}❌ You Lose {Colors.RESET}")
                 break
-            else:
-                break
-        happySurpriseLast = happySurpriseLast[index:]
-        if len(happySurpriseLast) >= n * frame_rate / 3:
-            print(f"{Colors.RED}❌ You Lose {Colors.RESET}")
+        flag = False
+        cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-    flag = False
-    cv2.imshow('Video', cv2.resize(frame, (1600, 960), interpolation=cv2.INTER_CUBIC))
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
 
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
 
-for i in emotion_history:
-    plt.scatter(i, 0)
-plt.show()
+    for i in emotion_history:
+        plt.scatter(i, 0)
+    plt.show()

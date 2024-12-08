@@ -147,12 +147,11 @@ const Game = () => {
         const intervalId = setInterval(captureAndSendFrame, 1000);
 
 
-        socket.on('webcam_response', (data) => {
-            // console.log('data message', data.message);
-            // if (data.message[3] + data.message[6] > 0.8) {
-            //     console.log('smile detected');
-            //     navigate('/lost');
-            // }
+        socket.on('webcam_response', (message) => {
+            console.log(message);
+            if (message.message == 'roundLost') {
+                navigate('/lost');
+            }
         });
         // Cleanup the interval and stop webcam on component unmount
         return () => {

@@ -8,7 +8,8 @@ from io import BytesIO
 from PIL import Image
 import time
 import uvicorn
-from newEmotion import *
+from test import get_eigenFace_mse
+from emotionTest import predict_emotion
 
 # Load environment variables from .env file
 
@@ -75,7 +76,7 @@ async def createGame(sid, gameData):
         'round_start_time': None
     }
     lobby = lobbies[gameId]
-    player = {'id': sid, 'name': gameData['adminName'], 'emotion_history': []}
+    player = {'id': sid, 'name': gameData['adminName'], 'emotion_history': [(0, (None, []))]}
     lobby['players'].append(player)
     # Admin joins the lobby room
     await sio.enter_room(sid, gameId)
@@ -98,7 +99,7 @@ async def joinLobby(sid, data):
     if lobby:
         if len(lobby['players']) < lobby['settings']['maxPlayers']:
             if not lobby['round_start_time']:
-                player = {'id': sid, 'name': playerName, 'emotion_history': []}
+                player = {'id': sid, 'name': playerName, 'emotion_history': [(0, (None, []))]}
                 lobby['players'].append(player)
 
                 players_names = [player['name'] for player in lobby['players']]
@@ -150,24 +151,6 @@ async def disconnect(sid):
             del lobbies[gameId]
             await sio.emit('lobbyClosed', {'message': 'Lobby has been closed by the admin.'}, room=gameId)
 
-def process_webcam_data(base64_data: str):
-    # Remove the "data:image/png;base64," prefix
-    base64_data = base64_data.split(",")[1]
-    
-    # Decode the base64 image
-    image_data = base64.b64decode(base64_data)
-
-    try:
-        image = Image.open(BytesIO(image_data))
-    
-        # Convert to OpenCV format
-        image_np = np.array(image)
-        print(type(image_np))
-        return [1, 0, 0, 0, 0, 0, 0]
-        
-    except Exception as e:
-        return str(e)
-
 
 # WebSocket route to handle webcam data and send back processing results
 @sio.event
@@ -176,20 +159,45 @@ async def webcam_data(sid, data):
 
     lobby_code = data['lobbyCode']
     lobby = lobbies.get(lobby_code)
-    current_time = time.time() - lobbies[data['lobbyCode']]['round_start_time']
 
-    response_message = process_webcam_data(data['image'])
-    
-    if lobby:
-        try:
-            if response_message[3] + response_message[6] >= 0.8:
-                lobby['players'][i]['emotion_history'].append(time.time() - lobby['round_start_time'])
-        except:
-            pass
-        print(lobby['players'])
-    else:
-        print(f'no lobby from {sid}')
-    await sio.emit('webcam_response', {'message': response_message}, to=sid)
+    base64_data = data['image'].split(",")[1]
+    # Decode the base64 image
+    image_data = base64.b64decode(base64_data)
+    player_number = 0
+    for i, player in enumerate(lobby['players']):
+        if player['id'] == sid:
+            player_number = i
+    message = None
+
+    try:
+        print(lobby['players'][player_number]['emotion_history'])
+        image = Image.open(BytesIO(image_data))
+        # Convert to OpenCV format
+        image_np = np.array(image)
+        # lobby['players'][player_number]['emotion_history'] = [
+        #         entry for entry in lobby['players'][player_number]['emotion_history']
+        #         if (time.time() - lobby['round_start_time'] - entry[0]) <= 6
+        # ]
+
+        # history = lobby['players'][player_number]['emotion_history']
+        # result= get_eigenFace_mse(image_np, history)
+        
+        # if result != None:
+        #     history_append, game_over = (time.time() - lobby['round_start_time'], result[0]), result[1]
+        #     print('face detected')
+        #     if game_over == True:
+        #         message = 'roundLost'
+        # else:
+        #     history_append = (time.time() - lobby['round_start_time'], (None, []))
+        #     print('still no face detected')     
+        # lobby['players'][player_number]['emotion_history'].append(history_append)
+        preds = predict_emotion(image_np)
+        print(preds)
+        
+    except:
+        print('no image detected')
+
+    await sio.emit('webcam_response', {'message': message}, to=sid)
 
 
 # Run the FastAPI app
