@@ -9,9 +9,9 @@ from PIL import Image
 import time
 
 # from test import get_eigenFace_mse
-from emotionTest import predict_emotion
+from newBackend.emotionTest import predict_emotion
 
-# Load environment variables from .env file
+# Load nvironment variables from .env file
 
 
 # Initialize FastAPI and Socket.IO
