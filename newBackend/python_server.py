@@ -7,8 +7,8 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 import time
-import uvicorn
-from test import get_eigenFace_mse
+
+# from test import get_eigenFace_mse
 from emotionTest import predict_emotion
 
 # Load environment variables from .env file
@@ -16,13 +16,8 @@ from emotionTest import predict_emotion
 
 # Initialize FastAPI and Socket.IO
 app = FastAPI()
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=[
-    'https://krackle.co',
-    'https://www.krackle.co',
-    'https://test.krackle.co',
-    'http://localhost:3000',
-    'localhost:8000'
-])
+sio = socketio.AsyncServer(async_mode='asgi', 
+                           cors_allowed_origins='*')
 
 # Mount the Socket.IO server to FastAPI
 app.mount("/socket.io", socketio.ASGIApp(sio))
@@ -37,7 +32,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins='*',
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -201,5 +196,5 @@ async def webcam_data(sid, data):
 
 
 # Run the FastAPI app
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)  # Running on port 8001, as port 8000 is taken by npm start
+# if __name__ == "__main__":
+# uvicorn.run(app, host="127.0.0.1", port=8000)  # Running on port 8001, as port 8000 is taken by npm start
