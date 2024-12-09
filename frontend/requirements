@@ -75,7 +75,7 @@ starlette==0.41.2
 tb-nightly==2.19.0a20241208
 tensorboard==2.18.0
 tensorboard-data-server==0.7.2
-tensorflow-cpu==2.18.0
+tensorflow==2.18.0
 tensorflow-hub==0.12.0
 tensorflowjs==3.18.0
 termcolor==2.5.0
