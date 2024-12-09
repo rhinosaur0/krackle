@@ -7,6 +7,7 @@ import numpy as np
 from io import BytesIO
 from PIL import Image
 import time
+import uvicorn
 
 # from test import get_eigenFace_mse
 from newBackend.emotionTest import predict_emotion
@@ -196,5 +197,5 @@ async def webcam_data(sid, data):
 
 
 # Run the FastAPI app
-# if __name__ == "__main__":
-# uvicorn.run(app, host="127.0.0.1", port=8000)  # Running on port 8001, as port 8000 is taken by npm start
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)  # Running on port 8001, as port 8000 is taken by npm start

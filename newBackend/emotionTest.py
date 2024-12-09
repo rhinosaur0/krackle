@@ -9,7 +9,7 @@ from keras_core.models import Sequential
 from keras_core.layers import Dense, Dropout, Flatten
 from keras_core.layers import Conv2D, MaxPooling2D
 import os
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Suppress unnecessary logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -189,9 +189,9 @@ if __name__ == '__main__':
     cap.release()
     cv2.destroyAllWindows()
 
-    for i in emotion_history:
-        plt.scatter(i, 0)
-    plt.show()
+    # for i in emotion_history:
+    #     plt.scatter(i, 0)
+    # plt.show()
     n: int | float = 3
     # grace period for the client to be happy or surprised to adjust to the game
     happySurpriseLast: list[float] = list()
@@ -281,6 +281,6 @@ if __name__ == '__main__':
     cap.release()
     cv2.destroyAllWindows()
 
-    for i in emotion_history:
-        plt.scatter(i, 0)
-    plt.show()
+    # for i in emotion_history:
+    #     plt.scatter(i, 0)
+    # plt.show()
