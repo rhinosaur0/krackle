@@ -4,7 +4,7 @@ gdown>=3.10.1
 tqdm>=4.30.0
 Pillow>=5.2.0
 opencv-python>=4.5.5.64
-https://storage.googleapis.com/tensorflow/versions/2.18.0/tensorflow_cpu-2.18.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whlkeras>=2.2.0
+https://storage.googleapis.com/tensorflow/versions/2.18.0/tensorflow_cpu-2.18.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 Flask>=1.1.2
 flask_cors>=4.0.1
 mtcnn>=0.1.0
